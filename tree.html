@@ -1,0 +1,321 @@
+
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <script src="bower_components/jquery/dist/jquery.js"></script>
+    <title></title>
+    <style>
+        li.libutton{
+            list-style: none;
+            display:inline-block;treestructure.uuid
+            border:1px solid black;
+            padding:0.3em;
+            margin:0.5em;
+            font-size: 20px;
+        }
+        p{
+            background-color: gainsboro;
+            line-height: 3em;
+            margin:1.5em;
+        }
+        .show{
+
+
+        }
+        span{
+            display: block;
+        }
+        .hide{
+            display:none;
+        }
+    </style>
+</head>
+<h2>Tree Structure --Personal Project</h2>
+<ul>
+    <li class="libutton"><a href="data:text/json;charset=utf-8," id='exportjson' download="tree.json">Export to JSON</a></li>
+    <li class="libutton">Save Local</li>
+    <li class="libutton">Load from Local</li>
+    <li class="libutton"><input type="file" id='loadjson' name="Load from JSON"></li>
+    <li class="libutton">Save to MongoDB</li>
+    <li class="libutton">Load from MongoDB</li>
+    <li class="libutton">Serialize(Parent Based)</li>
+</ul>
+<p>Use enter to create the nodes</p>
+<input type="checkbox" value="show">Show inputbox</input>
+
+
+<div id="root" class="hide">
+
+</div>
+
+
+</body>
+
+</html>
+<script>
+    //create an object
+
+    var rootid = guid();
+    var treestructure={
+        value:'Root Node',
+        uuid:rootid,
+        children:[]
+    };
+
+
+    //initiate the root node
+    var j = 0;
+    var root = $('input[type="checkbox"] + div');
+    root.attr('id',rootid);
+    root.before( '<span id="rootspan">' +'Root Node' +'[+]'+'</span>' );
+    root.css('margin-left',50+'px');
+    $("span[id='rootspan']").on('click', function() {
+        var a = $(this).next().hasClass("show") ? "hide" : "show";
+        $(this).next().attr('class', a);
+        var b = $(this).text() === 'Root Node' + '[+]' ? 'Root Node' + '[-]' : 'Root Node' + '[+]';
+        $(this).text(b);
+    });
+
+
+
+    showtree(root,rootid);
+
+
+    function showtree(ele,id) {
+        j++;
+        console.log(j);
+        if(ele.children().length <= 0) {
+            console.log('no child itself');
+            j--;
+            addinnerhtml(ele,id);  //self and self id
+
+            return undefined
+        }else{
+            var count = 0;
+            console.log('now there are children!');
+            for(var i =0; i < ele.children().length; i++){
+                var child = $(ele.children()[i]);
+                if(child.prop("tagName") == 'DIV' ) {
+                    addinnerhtml(child,id,count);    // child and child id
+                    count++;
+                    i++;
+                    ;   //because an input element insert, so jump over the div by i++
+                };
+
+            };
+
+        };
+
+    };
+    function addinnerhtml(element,id,count){
+        element.css('margin-left',50+'px');
+        element.attr('class',"show");
+        if(element.children().last().prop("tagName") !== 'INPUT') {
+            element.append('<input type="text" class="show">');
+        };
+        if(element.prev().prop("tagName") !== 'SPAN') {
+            console.log(id);
+            var parentobj = loopall(treestructure, id);
+            console.log(parentobj);
+            var currentobj = parentobj.children[count];
+
+
+            element.before('<span class='+ currentobj.value+'>' + currentobj.value + '[+]' + '</span>');
+            var spanadding = element.prev();
+            spanadding.off("click").on('click', function(){
+                var a =spanadding.next().hasClass("show")? "hide":"show";  //div
+                if(spanadding.next().prop("tagName") == 'DIV') {
+                    spanadding.next().attr('class', a);  //div
+                };
+                var sign=spanadding.text()=== currentobj.value +'[-]' ? currentobj.value +'[+]' : currentobj.value +'[-]';
+                spanadding.text(sign);
+            });
+
+
+            var input = element.children().last();
+                if(input.attr('name')!=='hasevent') {
+                    input.attr('name', 'hasevent');
+                    input.off('keypress').on('keypress', function (event) {
+                        if (event.keyCode == 13) {
+                            var value = this.value;
+
+                            var parentobj = loopall(treestructure, currentobj.uuid);
+                            var childobj = {
+                                value: value,
+                                uuid: guid(),
+                                children: []
+                            };
+                            parentobj.children.push(childobj);
+
+                            element.append('<span class=' + value + '>' + value + '[+]' + '</span>');
+                            element.append('<div class="hide"></div>');
+                            element.append(this);
+
+                            var span = element.children('span[class=' + value + ']');
+                            span.off('click').on('click', function () {
+                                var a = span.next().hasClass("show") ? "hide" : "show";  //div
+                                if (span.next().prop("tagName") == 'DIV') {
+                                    span.next().attr('class', a);  //div
+                                }
+                                ;
+                                var sign = span.text() === value + '[-]' ? value + '[+]' : value + '[-]';
+                                span.text(sign);
+                            });
+                            showtree(element,childobj.uuid);
+
+                        }
+                    });
+
+                }
+            showtree(element,currentobj.uuid);
+        }else{
+            var input = element.children().last();
+            if(input.attr('name')!=='hasevent') {
+                input.attr('name', 'hasevent');
+                input.on('keypress', function (event) {
+                    if (event.keyCode == 13) {
+                        var value = this.value;
+
+                        var parentobj = loopall(treestructure, id);
+                        var childobj = {
+                            value: value,
+                            uuid: guid(),
+                            children: []
+                        };
+                        parentobj.children.push(childobj);
+
+                        element.append('<span class=' + value + '>' + value + '[+]' + '</span>');
+                        element.append('<div id=' + childobj.uuid +' class="hide"></div>');
+                        element.append(this);
+
+
+
+                        var span = element.children('span[class=' + value + ']');
+                        span.off('click').on('click', function () {
+                            var a = span.next().hasClass("show") ? "hide" : "show";  //div
+                            if (span.next().prop("tagName") == 'DIV') {
+                                span.next().attr('class', a);  //div
+                            }
+                            ;
+                            var sign = span.text() === value + '[-]' ? value + '[+]' : value + '[-]';
+                            span.text(sign);
+                        });
+                        showtree(element, childobj.uuid);
+
+
+                    }
+                })
+            };
+        };
+
+
+    }
+
+    function loopall(obj,id){
+        if(obj.uuid == id){
+            return obj;
+        }else{
+            if(obj.children.length > 0){
+                for(var i =0 ;i<obj.children.length;i++){
+                    var result = loopall(obj.children[i],id);
+                    if(result){
+                        break
+                    };
+                }
+            };
+            return result;
+        }
+    };
+    function transferobject(obj){  //should be a jquery obj
+        var parentuuid = obj.uuid;
+        if(obj.children.length > 0 ){
+            for(var i =0 ; i<obj.children.length; i++){
+                console.log("parentid",$('#'+parentuuid));
+                $('#'+parentuuid).append( '<div id='+obj.children[i].uuid+' class="show"></div>' );
+                transferobject(obj.children[i]);
+
+            };
+        };
+    };
+
+    function guid() {
+        function s4() {
+            return Math.floor((1 + Math.random()) * 0x10000)
+                    .toString(16)
+                    .substring(1);
+        }
+        return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+                s4() + '-' + s4() + s4() + s4();
+    };
+
+    $('input[type="checkbox"]').on('click',function(){
+        var showbox = this.value==='show'? 'hide' : 'show';
+        $(this).attr('value', showbox);
+        $('input[type="text"]').attr('class', showbox);
+    });
+
+
+    $("#exportjson").on('click',function(){
+        this.href+= encodeURIComponent(JSON.stringify(treestructure));
+    });
+
+    $('#loadjson').on('change',function(){
+        var filereader = new FileReader();
+        filereader.addEventListener('loadend',function(){
+            var objtobeshowed = JSON.parse(decodeURIComponent(this.result));
+            root.attr('id',objtobeshowed.uuid);
+            treestructure = objtobeshowed;
+            root.empty();
+            root.append('<input type="text" class="show">');
+            transferobject(objtobeshowed);
+            root.append(root.children().first());
+            var input = root.children().last();
+            if(input.attr('name')!=='hasevent') {
+                input.attr('name', 'hasevent');
+                input.on('keypress', function (event) {
+                    if (event.keyCode == 13) {
+                        var value = this.value;
+
+                        var parentobj = loopall(treestructure, treestructure.uuid);
+                        var childobj = {
+                            value: value,
+                            uuid: guid(),
+                            children: []
+                        };
+                        parentobj.children.push(childobj);
+
+                        root.append('<span class=' + value + '>' + value + '[+]' + '</span>');
+                        root.append('<div id=' + childobj.uuid +' class="hide"></div>');
+                        root.append(this);
+
+
+
+                        var span = root.children('span[class=' + value + ']');
+                        span.off('click').on('click', function () {
+                            var a = span.next().hasClass("show") ? "hide" : "show";  //div
+                            if (span.next().prop("tagName") == 'DIV') {
+                                span.next().attr('class', a);  //div
+                            }
+                            ;
+                            var sign = span.text() === value + '[-]' ? value + '[+]' : value + '[-]';
+                            span.text(sign);
+                        });
+                        showtree(root, childobj.uuid);
+
+
+                    }
+                })
+            };
+            console.log("root inner html",root.html());
+            console.log("Finish getting json, now show the elements!");
+            showtree(root,treestructure.uuid);
+        });
+        filereader.readAsText(this.files[0]);
+
+
+    });
+
+
+
+</script>
